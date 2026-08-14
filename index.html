@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>我的留言板</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: #f2f4f7;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .chat {
+            width: 420px;
+            max-width: 95%;
+            height: 650px;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 10px 35px rgba(0,0,0,0.12);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .header {
+            background: #222;
+            color: white;
+            padding: 20px;
+            font-size: 20px;
+            font-weight: bold;
+        }
+
+        .status {
+            font-size: 12px;
+            color: #aaa;
+            margin-top: 5px;
+        }
+
+        #messages {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+        }
+
+        .message {
+            background: #f0f2f5;
+            padding: 12px 15px;
+            border-radius: 15px;
+            margin-bottom: 12px;
+        }
+
+        .author {
+            font-size: 12px;
+            color: #777;
+            margin-bottom: 5px;
+        }
+
+        .content {
+            font-size: 16px;
+            color: #222;
+        }
+
+        .input-area {
+            padding: 15px;
+            border-top: 1px solid #eee;
+        }
+
+        input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 10px;
+            margin-bottom: 10px;
+            font-size: 15px;
+        }
+
+        .send-row {
+            display: flex;
+            gap: 10px;
+        }
+
+        .send-row input {
+            margin: 0;
+            flex: 1;
+        }
+
+        button {
+            border: none;
+            background: #222;
+            color: white;
+            padding: 0 20px;
+            border-radius: 10px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="chat">
+
+    <div class="header">
+        💬 我的留言板
+        <div class="status">Powered by PocketBase</div>
+    </div>
+
+    <div id="messages">
+        正在加载留言……
+    </div>
+
+    <div class="input-area">
+
+        <input
+            id="author"
+            type="text"
+            placeholder="你的名字"
+        >
+
+        <div class="send-row">
+
+            <input
+                id="message"
+                type="text"
+                placeholder="输入一条留言..."
+            >
+
+            <button id="sendButton">
+                发送
+            </button>
+
+        </div>
+
+    </div>
+
+</div>
+
+<script>
+
+const PB_URL = "http://127.0.0.1:8090";
+
+const authorInput = document.getElementById("author");
+const messageInput = document.getElementById("message");
+const sendButton = document.getElementById("sendButton");
+const messagesBox = document.getElementById("messages");
+
+
+async function loadMessages() {
+
+    const response = await fetch(
+        PB_URL + "/api/collections/messages/records?sort=created"
+    );
+
+    const data = await response.json();
+
+    messagesBox.innerHTML = "";
+
+    data.items.forEach(item => {
+
+        const message = document.createElement("div");
+
+        message.className = "message";
+
+        message.innerHTML = `
+            <div class="author">
+                👤 ${item.author}
+            </div>
+
+            <div class="content">
+                ${item.content}
+            </div>
+        `;
+
+        messagesBox.appendChild(message);
+    });
+}
+
+
+async function sendMessage() {
+
+    const author = authorInput.value.trim();
+    const content = messageInput.value.trim();
+
+    if (!author) {
+        alert("请输入你的名字");
+        return;
+    }
+
+    if (!content) {
+        alert("请输入留言");
+        return;
+    }
+
+    const response = await fetch(
+        PB_URL + "/api/collections/messages/records",
+        {
+            method: "POST",
+
+            headers: {
+                "Content-Type": "application/json"
+            },
+
+            body: JSON.stringify({
+                author: author,
+                content: content
+            })
+        }
+    );
+
+    if (!response.ok) {
+
+        const error = await response.text();
+
+        console.log(error);
+
+        alert("发送失败：" + error);
+
+        return;
+    }
+
+    messageInput.value = "";
+
+    await loadMessages();
+}
+
+
+sendButton.addEventListener("click", sendMessage);
+
+
+// 每 2 秒自动读取一次
+setInterval(loadMessages, 2000);
+
+
+loadMessages();
+
+</script>
+
+</body>
+</html>
